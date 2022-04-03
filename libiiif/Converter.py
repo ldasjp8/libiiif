@@ -47,7 +47,7 @@ class Converter:
 
         for manifest in tqdm(manifests):
             manifestData = requests.get(manifest).json()
-            canvases = manifestData["sequences"][0]["canvases"]
+            canvases = manifestData["sequences"][0]["canvases"]            
 
             for i in tqdm(range(len(canvases))):
                 canvas = canvases[i]
@@ -126,20 +126,73 @@ class Converter:
                     "width": width
                 })
         
-        label = curation["label"]
+        # label = curation["label"]
+        label = manifestData["label"]
+        rights = manifestData["license"]
+        viewingDirection = manifestData["viewingDirection"]
+        attribution = manifestData["attribution"]
+        attribution = "『{}』({}所蔵)を改変".format(manifestData["label"], attribution)
+        seeAlso = manifestData["seeAlso"]
 
-        return {
+        id = seeAlso.split("/")[-1]
+
+        result = {
 
             "@context": "http://iiif.io/api/presentation/3/context.json",
-            # "id": manifestUri,
+            # "id": "https://d1fasenpql7fi9.cloudfront.net/v1/manifest/{}.json".format(id),
             "type": "Manifest",
             "label": {
                 "none": [
                     label
                 ]
             },
+            "metadata": manifestData["metadata"],
+            "requiredStatement": {
+                "label": "Attribution",
+                "value": attribution
+            },
+            "rights": rights,
+            "viewingDirection": viewingDirection,
+            "seeAlso": [
+                {
+                    "id": seeAlso,
+                    "type": "Dataset",
+                    "label": {
+                        "none": [
+                            "OAI-PMH"
+                        ]
+                    },
+                    "format": "application/xml"
+                }
+            ],
+            "homepage": [
+                {
+                    "id": "https://dl.ndl.go.jp/info:ndljp/pid/{}".format(id),
+                    "type": "Text",
+                    "label": label,
+                    "format": "text/html",
+                    "language": [
+                        "ja"
+                    ]
+                }
+            ],
             "items": canvases3
         }
+
+        if "structures" in manifestData:
+            structures = manifestData["structures"]
+            for structure in structures:
+                items = []
+                for canvas_id in structure["canvases"]:
+                    items.append({
+                        "id": canvas_id,
+                        "type": "Canvas"
+                    })
+                structure["items"] = items
+                del structure["canvases"]
+            result["structures"] = structures
+
+        return result
 
     def test2(self):
         """
