@@ -121,7 +121,11 @@ class Converter:
                             "type": "AnnotationPage"
                         }
                     ],
-                    "label" : "[{}]".format(canvasIndex),
+                    "label" : {
+                        "none": [
+                            "[{}]".format(canvasIndex)
+                        ]
+                    },
                     "type": "Canvas",
                     "width": width
                 })
@@ -133,6 +137,34 @@ class Converter:
         attribution = manifestData["attribution"]
         attribution = "『{}』({}所蔵)を改変".format(manifestData["label"], attribution)
         seeAlso = manifestData["seeAlso"]
+
+        metadata2 = []
+        for m in manifestData["metadata"]:
+            metadata2.append({
+                "label": {
+                    "none": [
+                        m["label"]
+                    ]
+                },
+                "value": {
+                    "none": [
+                        m["value"]
+                    ]
+                }
+            })
+
+        metadata2.append({
+            "label": {
+                "none": [
+                    "rights"
+                ]
+            },
+            "value": {
+                "none": [
+                    rights
+                ]
+            }
+        })
 
         id = seeAlso.split("/")[-1]
 
@@ -146,12 +178,20 @@ class Converter:
                     label
                 ]
             },
-            "metadata": manifestData["metadata"],
+            "metadata": metadata2,
             "requiredStatement": {
-                "label": "Attribution",
-                "value": attribution
+                "label":  {
+                    "none": [
+                        "Attribution"
+                    ]
+                },
+                "value": {
+                    "none": [
+                        attribution
+                    ]
+                }
             },
-            "rights": rights,
+            # "rights": rights,
             "viewingDirection": viewingDirection,
             "seeAlso": [
                 {
@@ -169,7 +209,11 @@ class Converter:
                 {
                     "id": "https://dl.ndl.go.jp/info:ndljp/pid/{}".format(id),
                     "type": "Text",
-                    "label": label,
+                    "label": {
+                        "none": [
+                            label
+                        ]
+                    },
                     "format": "text/html",
                     "language": [
                         "ja"
@@ -181,16 +225,29 @@ class Converter:
 
         if "structures" in manifestData:
             structures = manifestData["structures"]
+            structures2 = []
             for structure in structures:
                 items = []
+                structure2 = {
+                    "id": structure["@id"],
+                    "type": structure["@type"].replace("sc:", ""),
+                    "label": {
+                        "none": [
+                            structure["label"]
+                        ]
+                    },
+                    "items": items
+                }
+                structures2.append(structure2)
+                
                 for canvas_id in structure["canvases"]:
                     items.append({
                         "id": canvas_id,
                         "type": "Canvas"
                     })
-                structure["items"] = items
-                del structure["canvases"]
-            result["structures"] = structures
+                # structure["items"] = items
+                # del structure["canvases"]
+            result["structures"] = structures2
 
         return result
 
