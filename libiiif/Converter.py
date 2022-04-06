@@ -127,7 +127,14 @@ class Converter:
                         ]
                     },
                     "type": "Canvas",
-                    "width": width
+                    "width": width,
+                    "thumbnail": [
+                        {
+                            "id": canvas["thumbnail"]["@id"],
+                            "type": "Image",
+                            "format": "image/jpeg"
+                        }
+                    ]
                 })
         
         # label = curation["label"]
