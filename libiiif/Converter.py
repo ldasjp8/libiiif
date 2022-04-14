@@ -1,13 +1,13 @@
 import requests
 import json
 from tqdm import tqdm
+from bs4 import BeautifulSoup
 
 """
 モジュール `Converter` は，IIIFに関する変換処理を行います．
 """
 
 class Converter:
-    test = ""
 
     @staticmethod
     def convertCuration2Manifest3(curation):
@@ -257,6 +257,108 @@ class Converter:
             result["structures"] = structures2
 
         return result
+
+    @staticmethod
+    def convertManifest3ToTEI(manifest):
+
+        """
+        IIIFマニフェスト3をTEIに変換します。
+        """
+        
+        htmlText = '''
+        <?xml-model href="https://raw.githubusercontent.com/ldasjp8/tei-example/main/tei_all.rng" schematypens="http://relaxng.org/ns/structure/1.0" type="application/xml"?>
+        <TEI xmlns="http://www.tei-c.org/ns/1.0">
+            <teiHeader>
+                <fileDesc>
+                    <titleStmt>
+                        <title>{}</title>
+                    </titleStmt>
+                    <publicationStmt>
+                        <p>{}</p>
+                    </publicationStmt>
+                    <sourceDesc>
+                        <p>{}</p>
+                    </sourceDesc>
+                </fileDesc>
+            </teiHeader>
+            <text>
+                <body>
+                </body>
+            </text>
+            <facsimile></facsimile>
+        </TEI>
+        '''.format(manifest["label"]["none"][0], "Satoru Nakamura", "国立国会図書館 National Diet Library, JAPAN")
+
+        bs = BeautifulSoup(htmlText, "xml")
+
+        facsimile = bs.find("facsimile")
+        facsimile["source"] = manifest["id"]
+            
+        items = manifest["items"]
+
+        count = 0
+
+        for i in range(len(items)):
+            item = items[i]
+            canvas_id = item["id"]
+            annotations = item["annotations"][0]["items"]
+            
+            pb = bs.new_tag('pb')
+            index = i + 1
+            zindex = str(index).zfill(4)
+            
+            div = bs.new_tag('div')
+            div["n"] = index
+            bs.find("body").append(div)
+            
+            pb["n"] = index
+            pb["corresp"] = "#page{}".format( zindex)
+            div.append(pb)
+            
+            # surface
+            surface = bs.new_tag('surface')
+            surface["source"] = canvas_id
+            surface["n"] = index
+            facsimile.append(surface)
+            
+            for annotation in annotations:
+                member_id = annotation["target"]
+                chars = annotation["body"]["value"]
+            
+                spl = member_id.split("#xywh=")
+                xywh = spl[1]
+
+                # ab
+                ab = bs.new_tag('ab')
+                ab.string = chars
+                
+                # zone_id = "zone_{}_{}".format(zindex, xywh)
+                zone_id = "z{}".format(count)
+
+                count += 1
+                
+                ab["facs"] = "#" + zone_id
+                
+                div.append(ab)
+                
+                # zone
+                zone = bs.new_tag('zone')
+                surface.append(zone)
+                zone["xml:id"] = zone_id
+                
+                spl = xywh.split(",")
+                
+                x = int(spl[0])
+                y = int(spl[1])
+                w = int(spl[2])
+                h = int(spl[3])
+                
+                zone["ulx"] = x
+                zone["uly"] = y
+                zone["lrx"] = x + w
+                zone["lry"] = y + h
+
+        return str(bs) # .prettify()
 
     def test2(self):
         """
